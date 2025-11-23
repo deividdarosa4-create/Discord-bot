@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Salas - <%= guild.name %></title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-brand">🎮 Sistema de Salas Pro</div>
+    <div class="navbar-user">
+      <a href="/auth/logout" class="btn btn-secondary btn-sm">Salir</a>
+    </div>
+  </nav>
+
+  <div class="dashboard-wrapper">
+    <%- include('sidebar', { guild, guildId: guild.id }) %>
+
+    <main class="main-content">
+      <div class="page-header">
+        <h1>Gestión Avanzada de Salas</h1>
+        <p>Crea y administra salas para Free Fire con sistema de roles, horarios y cupos automáticos</p>
+      </div>
+
+      <!-- Tabs Navigation -->
+      <div class="tabs-nav">
+        <button class="tab-btn active" onclick="switchTab('active')">🎮 Salas Activas</button>
+        <button class="tab-btn" onclick="switchTab('create')">➕ Crear Sala</button>
+        <button class="tab-btn" onclick="switchTab('history')">📋 Historial</button>
+      </div>
+
+      <!-- Tab: Salas Activas -->
+      <div id="tab-active" class="tab-content active">
+        <div class="section">
+          <h2 class="section-title">Salas Activas Ahora</h2>
+          
+          <% if (activeRooms && activeRooms.length > 0) { %>
+            <div class="rooms-pro-grid">
+              <% activeRooms.forEach(room => { %>
+                <div class="room-pro-card">
+                  <div class="room-header-pro">
+                    <div class="room-title">
+                      <h3><%= room.nombre %></h3>
+                      <span class="room-status-badge active">🟢 ACTIVA</span>
+                    </div>
+                    <div class="room-time">
+                      <span class="time-badge">🕐 <%= room.hora_apertura %> - <%= room.hora_cierre %></span>
+                    </div>
+                  </div>
+
+                  <div class="room-stats-pro">
+                    <div class="stat-row">
+                      <span class="stat-label">Cupo:</span>
+                      <div class="cupo-bar">
+                        <div class="cupo-filled" style="width: <%= (room.jugadores.length / room.max_players) * 100 %>%"></div>
+                      </div>
+                      <span class="stat-value"><%= room.jugadores.length %>/<%= room.max_players %></span>
+                    </div>
+
+                    <% if (room.jugadores && room.jugadores.length > 0) { %>
+                      <div class="jugadores-list">
+                        <span class="list-title">👥 Jugadores:</span>
+                        <div class="jugadores-tags">
+                          <% room.jugadores.forEach(player => { %>
+                            <span class="player-tag"><%= player %></span>
+                          <% }) %>
+                        </div>
+                      </div>
+                    <% } %>
+                  </div>
+
+                  <div class="room-actions-pro">
+                    <button class="btn btn-secondary btn-sm" onclick="viewRoomDetails('<%= room.room_id %>')">📊 Detalles</button>
+                    <button class="btn btn-warning btn-sm" onclick="closeRoomNow('<%= room.room_id %>')">🚫 Cerrar Ahora</button>
+                  </div>
+                </div>
+              <% }) %>
+            </div>
+          <% } else { %>
+            <div class="empty-state">
+              <p class="empty-icon">🎮</p>
+              <p class="empty-text">No hay salas activas en este momento</p>
+              <a href="#tab-create" onclick="switchTab('create')" class="btn btn-primary">Crear Primera Sala</a>
+            </div>
+          <% } %>
+        </div>
+      </div>
+
+      <!-- Tab: Crear Sala -->
+      <div id="tab-create" class="tab-content">
+        <div class="section">
+          <h2 class="section-title">Crear Nueva Sala</h2>
+          
+          <form class="pro-form" onsubmit="createRoomPro(event)">
+            <div class="form-row">
+              <div class="form-group">
+                <label>📝 Nombre de la Sala *</label>
+                <input type="text" id="roomName" placeholder="Ej: Sala Team 1" required>
+              </div>
+              <div class="form-group">
+                <label>👥 Máximo de Jugadores *</label>
+                <input type="number" id="maxPlayers" value="50" min="1" required>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>⏰ Hora de Apertura *</label>
+                <input type="time" id="openTime" required>
+              </div>
+              <div class="form-group">
+                <label>🔴 Hora de Cierre *</label>
+                <input type="time" id="closeTime" required>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>📢 Canal Discord para Embed *</label>
+                <select id="channelId" required>
+                  <option value="">Selecciona un canal...</option>
+                  <% if (channels && channels.length > 0) { %>
+                    <% channels.forEach(channel => { %>
+                      <option value="<%= channel.id %>"><%= channel.name %></option>
+                    <% }) %>
+                  <% } %>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>🎭 Rol Temporal para Asignar</label>
+                <select id="roleId">
+                  <option value="">Ninguno (opcional)</option>
+                  <% if (roles && roles.length > 0) { %>
+                    <% roles.forEach(role => { %>
+                      <option value="<%= role.id %>"><%= role.name %></option>
+                    <% }) %>
+                  <% } %>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>💬 Mensaje Personalizado (Embed)</label>
+              <textarea id="customMessage" placeholder="Ej: ¡Únete a nuestra sala de entrenamiento! Mejora tus habilidades en Free Fire." rows="4"></textarea>
+            </div>
+
+            <div class="form-group">
+              <label>ℹ️ Descripción Adicional</label>
+              <textarea id="description" placeholder="Descripción adicional de la sala..." rows="3"></textarea>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary btn-large">🎮 Crear Sala</button>
+              <button type="reset" class="btn btn-outline btn-large">🔄 Limpiar</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Tab: Historial -->
+      <div id="tab-history" class="tab-content">
+        <div class="section">
+          <h2 class="section-title">Historial de Salas</h2>
+          
+          <div class="history-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Hora Apertura</th>
+                  <th>Hora Cierre</th>
+                  <th>Jugadores</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% if (closedRooms && closedRooms.length > 0) { %>
+                  <% closedRooms.forEach(room => { %>
+                    <tr>
+                      <td><strong><%= room.nombre %></strong></td>
+                      <td><%= room.hora_apertura %></td>
+                      <td><%= room.hora_cierre %></td>
+                      <td><%= room.jugadores.length %></td>
+                      <td><span class="badge-closed">⭕ Cerrada</span></td>
+                      <td>
+                        <button class="btn btn-sm btn-secondary" onclick="viewHistoryDetail('<%= room.room_id %>')">Ver</button>
+                      </td>
+                    </tr>
+                  <% }) %>
+                <% } else { %>
+                  <tr>
+                    <td colspan="6" style="text-align: center; color: var(--text-secondary);">📭 Sin historial de salas cerradas</td>
+                  </tr>
+                <% } %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const guildId = '<%= guild.id %>';
+
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      
+      document.getElementById('tab-' + tabName).classList.add('active');
+      event.target.classList.add('active');
+    }
+
+    async function createRoomPro(e) {
+      e.preventDefault();
+
+      const roomData = {
+        nombre: document.getElementById('roomName').value,
+        max_players: parseInt(document.getElementById('maxPlayers').value),
+        hora_apertura: document.getElementById('openTime').value,
+        hora_cierre: document.getElementById('closeTime').value,
+        channel_id: document.getElementById('channelId').value,
+        role_id: document.getElementById('roleId').value || null,
+        custom_message: document.getElementById('customMessage').value,
+        description: document.getElementById('description').value
+      };
+
+      try {
+        const response = await fetch(`/api/salas/crear/${guildId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(roomData)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          alert('✅ ¡Sala creada exitosamente!');
+          location.reload();
+        } else {
+          alert('❌ Error: ' + (result.error || 'No se pudo crear la sala'));
+        }
+      } catch (error) {
+        alert('❌ Error: ' + error.message);
+      }
+    }
+
+    async function closeRoomNow(roomId) {
+      if (!confirm('¿Estás seguro de que deseas cerrar esta sala?')) return;
+
+      try {
+        const response = await fetch(`/api/salas/cerrar/${roomId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          alert('✅ Sala cerrada correctamente');
+          location.reload();
+        } else {
+          alert('❌ Error: ' + (result.error || 'No se pudo cerrar la sala'));
+        }
+      } catch (error) {
+        alert('❌ Error: ' + error.message);
+      }
+    }
+
+    function viewRoomDetails(roomId) {
+      alert('📊 Detalles de la sala: ' + roomId + '\n(Función en desarrollo)');
+    }
+
+    function viewHistoryDetail(roomId) {
+      alert('📋 Historial de: ' + roomId + '\n(Función en desarrollo)');
+    }
+  </script>
+
+  <style>
+    .tabs-nav {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 25px;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      padding: 12px 20px;
+      cursor: pointer;
+      font-weight: 600;
+      border-bottom: 3px solid transparent;
+      transition: all 0.3s ease;
+      font-size: 14px;
+    }
+
+    .tab-btn:hover {
+      color: white;
+    }
+
+    .tab-btn.active {
+      color: #5865f2;
+      border-bottom-color: #5865f2;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .rooms-pro-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+      gap: 20px;
+    }
+
+    .room-pro-card {
+      background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      transition: all 0.3s ease;
+    }
+
+    .room-pro-card:hover {
+      border-color: #5865f2;
+      transform: translateY(-5px);
+      box-shadow: 0 10px 30px rgba(88, 101, 242, 0.2);
+    }
+
+    .room-header-pro {
+      margin-bottom: 15px;
+    }
+
+    .room-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .room-title h3 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .room-status-badge {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      background: rgba(0, 208, 132, 0.2);
+      color: #00d084;
+    }
+
+    .time-badge {
+      background: rgba(88, 101, 242, 0.2);
+      color: #5865f2;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .room-stats-pro {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 15px;
+    }
+
+    .stat-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      min-width: 50px;
+    }
+
+    .cupo-bar {
+      flex: 1;
+      height: 8px;
+      background: var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .cupo-filled {
+      height: 100%;
+      background: linear-gradient(90deg, #5865f2, #00d084);
+      transition: width 0.3s ease;
+    }
+
+    .stat-value {
+      font-weight: 700;
+      color: white;
+      min-width: 50px;
+      text-align: right;
+    }
+
+    .jugadores-list {
+      margin-top: 10px;
+    }
+
+    .list-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .jugadores-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .player-tag {
+      background: #5865f2;
+      color: white;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .room-actions-pro {
+      display: flex;
+      gap: 8px;
+    }
+
+    .room-actions-pro .btn {
+      flex: 1;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 50px 20px;
+    }
+
+    .empty-icon {
+      font-size: 48px;
+      margin-bottom: 15px;
+    }
+
+    .empty-text {
+      font-size: 16px;
+      color: var(--text-secondary);
+      margin-bottom: 20px;
+    }
+
+    .pro-form {
+      background: var(--primary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 25px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .form-group label {
+      font-weight: 600;
+      color: white;
+      font-size: 14px;
+    }
+
+    .form-group input, .form-group textarea, .form-group select {
+      background: var(--secondary);
+      border: 1px solid var(--border);
+      color: white;
+      padding: 12px;
+      border-radius: 6px;
+      font-family: inherit;
+    }
+
+    .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+      outline: none;
+      border-color: #5865f2;
+      background: #2a2d31;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 15px;
+      margin-top: 25px;
+    }
+
+    .btn-large {
+      flex: 1;
+      padding: 15px 20px;
+    }
+
+    .history-table {
+      overflow-x: auto;
+    }
+
+    .history-table table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .history-table thead {
+      background: var(--primary);
+      border-bottom: 2px solid var(--border);
+    }
+
+    .history-table th {
+      padding: 12px 15px;
+      text-align: left;
+      font-weight: 600;
+      color: var(--text-secondary);
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+
+    .history-table td {
+      padding: 15px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .history-table tbody tr:hover {
+      background: var(--secondary);
+    }
+
+    .badge-closed {
+      background: rgba(237, 66, 69, 0.2);
+      color: #ed4245;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    @media (max-width: 768px) {
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+
+      .rooms-pro-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .form-actions {
+        flex-direction: column;
+      }
+
+      .tabs-nav {
+        flex-wrap: wrap;
+      }
+    }
+  </style>
+</body>
+</html>
