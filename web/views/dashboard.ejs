@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - <%= guild.name %></title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="navbar-brand">🎮 <%= guild.name %></div>
+    <div class="navbar-user">
+      <div class="user-badge">
+        <img src="https://cdn.discordapp.com/avatars/<%= user.id %>/<%= user.avatar %>.png" alt="Avatar" class="user-avatar">
+        <span><%= user.username %></span>
+      </div>
+      <a href="/auth/logout" class="btn btn-secondary btn-sm">Salir</a>
+    </div>
+  </nav>
+
+  <div class="dashboard-wrapper">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <% if (guild.icon) { %>
+          <img src="https://cdn.discordapp.com/icons/<%= guild.id %>/<%= guild.icon %>.png" alt="<%= guild.name %>" class="guild-avatar">
+        <% } else { %>
+          <div class="guild-avatar-placeholder"><%= guild.name.charAt(0) %></div>
+        <% } %>
+        <h2><%= guild.name %></h2>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="/dashboard/<%= guild.id %>" class="nav-item active">
+          <span class="icon">📊</span>
+          <span>Dashboard</span>
+        </a>
+        <a href="/dashboard/<%= guild.id %>/settings" class="nav-item">
+          <span class="icon">⚙️</span>
+          <span>Configuración</span>
+        </a>
+        <a href="/dashboard/<%= guild.id %>/roles" class="nav-item">
+          <span class="icon">👥</span>
+          <span>Roles</span>
+        </a>
+        <a href="/dashboard/<%= guild.id %>/rooms" class="nav-item">
+          <span class="icon">🎮</span>
+          <span>Salas</span>
+        </a>
+        <a href="/dashboard/<%= guild.id %>/announcements" class="nav-item">
+          <span class="icon">📢</span>
+          <span>Anuncios</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <a href="/" class="btn btn-outline btn-sm w-full">← Volver a Servidores</a>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <div class="page-header">
+        <h1>Dashboard Principal</h1>
+        <p>Bienvenido al panel de administración</p>
+      </div>
+
+      <!-- Stats Grid -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">👥</div>
+          <div class="stat-content">
+            <p class="stat-label">Miembros</p>
+            <h3 class="stat-value"><%= guild.approximate_member_count || 0 %></h3>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">💬</div>
+          <div class="stat-content">
+            <p class="stat-label">Canales</p>
+            <h3 class="stat-value">-</h3>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">🎭</div>
+          <div class="stat-content">
+            <p class="stat-label">Roles</p>
+            <h3 class="stat-value">-</h3>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">⚙️</div>
+          <div class="stat-content">
+            <p class="stat-label">Estado</p>
+            <h3 class="stat-value" style="color: #00d084;">Activo</h3>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="section">
+        <h2 class="section-title">Acciones Rápidas</h2>
+        <div class="action-grid">
+          <a href="/dashboard/<%= guild.id %>/settings" class="action-btn">
+            <span class="icon">⚙️</span>
+            <span>Configuración</span>
+          </a>
+          <a href="/dashboard/<%= guild.id %>/roles" class="action-btn">
+            <span class="icon">👥</span>
+            <span>Gestionar Roles</span>
+          </a>
+          <a href="/dashboard/<%= guild.id %>/rooms" class="action-btn">
+            <span class="icon">🎮</span>
+            <span>Crear Sala</span>
+          </a>
+          <a href="/dashboard/<%= guild.id %>/announcements" class="action-btn">
+            <span class="icon">📢</span>
+            <span>Enviar Anuncio</span>
+          </a>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <style>
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+
+    .stat-card {
+      background: var(--secondary);
+      border-radius: 8px;
+      padding: 20px;
+      display: flex;
+      gap: 15px;
+      border-left: 4px solid #5865f2;
+    }
+
+    .stat-icon {
+      font-size: 32px;
+    }
+
+    .stat-content {
+      flex: 1;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin: 0;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: 700;
+      margin: 5px 0 0;
+      color: white;
+    }
+
+    .action-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 15px;
+    }
+
+    .action-btn {
+      background: var(--secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 15px;
+      text-align: center;
+      text-decoration: none;
+      color: white;
+      transition: all 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .action-btn:hover {
+      background: #5865f2;
+      border-color: #5865f2;
+    }
+
+    .action-btn .icon {
+      font-size: 24px;
+    }
+  </style>
+</body>
+</html>
