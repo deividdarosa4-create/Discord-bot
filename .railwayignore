@@ -1,0 +1,11 @@
+node_modules
+.cache
+.pythonlibs
+.local
+__pycache__
+*.pyc
+.pytest_cache
+.DS_Store
+*.egg-info
+dist
+build
