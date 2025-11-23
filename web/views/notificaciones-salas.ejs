@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notificación de Salas - <%= guild.name %></title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-brand">🔥 Notificación de Salas</div>
+    <div class="navbar-user">
+      <a href="/auth/logout" class="btn btn-secondary btn-sm">Salir</a>
+    </div>
+  </nav>
+
+  <div class="dashboard-wrapper">
+    <%- include('sidebar', { guild, guildId: guild.id }) %>
+
+    <main class="main-content">
+      <div class="page-header">
+        <h1>Sistema de Notificación de Salas</h1>
+        <p>Gestiona las notificaciones de salas Free Fire para tu comunidad</p>
+      </div>
+
+      <!-- Tabs Navigation -->
+      <div class="tabs-nav">
+        <button class="tab-btn active" onclick="switchTab('config')">⚙️ Configuración</button>
+        <button class="tab-btn" onclick="switchTab('jugadores')">👥 Jugadores Anotados</button>
+      </div>
+
+      <!-- Tab: Configuración -->
+      <div id="tab-config" class="tab-content active">
+        <div class="section">
+          <h2 class="section-title">Configurar Notificaciones</h2>
+          
+          <div class="pro-form">
+            <div class="form-row">
+              <div class="form-group">
+                <label>
+                  <input type="checkbox" id="notificacionesActivas" <%= settings?.notifications_enabled ? 'checked' : '' %>>
+                  🔔 Activar Notificaciones
+                </label>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>👥 Rol a Notificar *</label>
+                <select id="rolNotificar" required>
+                  <option value="">Selecciona un rol...</option>
+                  <option value="@here">@here (Todos)</option>
+                  <option value="@everyone">@everyone (Todos)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>
+                  <input type="checkbox" id="enviarDM" <%= settings?.send_dm ? 'checked' : '' %>>
+                  ✉️ Enviar DM a jugadores
+                </label>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>📝 Mensaje Personalizado *</label>
+                <textarea id="mensajePersonalizado" placeholder="Ej: ¡Únete a la sala! Tenemos espacio para ti..." required><%= settings?.custom_message || '' %></textarea>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>🎮 Nombre de la Sala *</label>
+                <input type="text" id="nombreSala" placeholder="Ej: Sala Team 1" required value="<%= settings?.room_name || '' %>">
+              </div>
+              <div class="form-group">
+                <label>🕐 Horario Actividad</label>
+                <input type="text" id="horarioSala" placeholder="Ej: 19:00 - 23:00" value="<%= settings?.room_schedule || '' %>">
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="button" class="btn btn-primary" onclick="guardarConfiguracion()">💾 Guardar Configuración</button>
+              <button type="button" class="btn btn-secondary" onclick="probarNotificacion()">🧪 Probar Notificación</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: Jugadores Anotados -->
+      <div id="tab-jugadores" class="tab-content">
+        <div class="section">
+          <h2 class="section-title">👥 Jugadores Listos Hoy</h2>
+          
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-icon">👥</div>
+              <div class="stat-content">
+                <p class="stat-label">Total Anotados</p>
+                <p class="stat-value"><%= jugadoresAnotados?.length || 0 %></p>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon">✅</div>
+              <div class="stat-content">
+                <p class="stat-label">Confirmados</p>
+                <p class="stat-value"><%= jugadoresConfirmados?.length || 0 %></p>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon">🔔</div>
+              <div class="stat-content">
+                <p class="stat-label">Notificados</p>
+                <p class="stat-value"><%= jugadoresNotificados?.length || 0 %></p>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top: 30px;">
+            <% if (jugadoresAnotados && jugadoresAnotados.length > 0) { %>
+              <div class="history-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>👤 Jugador</th>
+                      <th>📅 Fecha</th>
+                      <th>⏰ Hora</th>
+                      <th>🎯 Estado</th>
+                      <th>🎮 Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% jugadoresAnotados.forEach(jugador => { %>
+                      <tr>
+                        <td><strong><%= jugador.nombre %></strong></td>
+                        <td><%= new Date(jugador.fecha).toLocaleDateString('es-ES') %></td>
+                        <td><%= new Date(jugador.fecha).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) %></td>
+                        <td>
+                          <% if (jugador.estado === 'confirmado') { %>
+                            <span style="background: rgba(76, 175, 80, 0.15); color: rgba(76, 175, 80, 0.8); padding: 4px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase;">✅ Confirmado</span>
+                          <% } else if (jugador.estado === 'notificado') { %>
+                            <span style="background: rgba(61, 90, 128, 0.15); color: rgba(74, 111, 165, 0.8); padding: 4px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase;">🔔 Notificado</span>
+                          <% } else { %>
+                            <span style="background: rgba(255, 167, 38, 0.15); color: rgba(255, 167, 38, 0.8); padding: 4px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase;">⏳ Pendiente</span>
+                          <% } %>
+                        </td>
+                        <td>
+                          <button class="btn btn-sm btn-secondary" onclick="removerJugador('<%= jugador.user_id %>')">Remover</button>
+                        </td>
+                      </tr>
+                    <% }) %>
+                  </tbody>
+                </table>
+              </div>
+            <% } else { %>
+              <div class="empty-state">
+                <p class="empty-icon">👥</p>
+                <p class="empty-text">No hay jugadores anotados aún</p>
+              </div>
+            <% } %>
+          </div>
+
+          <div style="margin-top: 30px; display: flex; gap: 16px;">
+            <button class="btn btn-primary" onclick="notificarATodos()">📢 Notificar a Todos</button>
+            <button class="btn btn-warning" onclick="limpiarLista()">🗑️ Limpiar Lista</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const guildId = '<%= guild.id %>';
+
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.getElementById(`tab-${tabName}`)?.classList.add('active');
+      event.target.classList.add('active');
+    }
+
+    async function guardarConfiguracion() {
+      const data = {
+        notifications_enabled: document.getElementById('notificacionesActivas').checked,
+        notification_role: document.getElementById('rolNotificar').value,
+        send_dm: document.getElementById('enviarDM').checked,
+        custom_message: document.getElementById('mensajePersonalizado').value,
+        room_name: document.getElementById('nombreSala').value,
+        room_schedule: document.getElementById('horarioSala').value
+      };
+
+      try {
+        const response = await fetch(`/api/guild/${guildId}/notificaciones-salas/config`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+          alert('✅ Configuración guardada correctamente');
+        } else {
+          alert('❌ Error al guardar configuración');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('❌ Error al guardar configuración');
+      }
+    }
+
+    async function probarNotificacion() {
+      try {
+        const response = await fetch(`/api/guild/${guildId}/notificaciones-salas/test`, {
+          method: 'POST'
+        });
+
+        if (response.ok) {
+          alert('✅ Notificación de prueba enviada a Discord');
+        } else {
+          alert('❌ Error al enviar notificación de prueba');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('❌ Error al enviar notificación');
+      }
+    }
+
+    async function removerJugador(userId) {
+      if (!confirm('¿Estás seguro de que quieres remover este jugador?')) return;
+
+      try {
+        const response = await fetch(`/api/guild/${guildId}/notificaciones-salas/jugador/${userId}`, {
+          method: 'DELETE'
+        });
+
+        if (response.ok) {
+          location.reload();
+        } else {
+          alert('❌ Error al remover jugador');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('❌ Error al remover jugador');
+      }
+    }
+
+    async function notificarATodos() {
+      if (!confirm('¿Enviar notificación a todos los jugadores?')) return;
+
+      try {
+        const response = await fetch(`/api/guild/${guildId}/notificaciones-salas/notificar`, {
+          method: 'POST'
+        });
+
+        if (response.ok) {
+          alert('✅ Notificaciones enviadas a todos');
+        } else {
+          alert('❌ Error al enviar notificaciones');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('❌ Error al enviar notificaciones');
+      }
+    }
+
+    async function limpiarLista() {
+      if (!confirm('¿Estás seguro de que quieres limpiar toda la lista de jugadores?')) return;
+
+      try {
+        const response = await fetch(`/api/guild/${guildId}/notificaciones-salas/limpiar`, {
+          method: 'POST'
+        });
+
+        if (response.ok) {
+          location.reload();
+        } else {
+          alert('❌ Error al limpiar lista');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('❌ Error al limpiar lista');
+      }
+    }
+  </script>
+</body>
+</html>
