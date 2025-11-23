@@ -1,0 +1,26 @@
+{
+  "configs": {
+    "1441364295282851863": {
+      "channel_id": "1442130393284215005",
+      "message_id": "1442202453289472123",
+      "torneo_seleccionado": null
+    }
+  },
+  "torneos": {
+    "1441364295282851863": {}
+  },
+  "salas": {
+    "1441364295282851863": {}
+  },
+  "notificaciones_salas": {
+    "1441364295282851863": {
+      "notifications_enabled": true,
+      "notification_role": "@here",
+      "send_dm": true,
+      "custom_message": "🔥 ¡Únete a la sala! Tenemos espacio para ti",
+      "room_name": "Sala Free Fire",
+      "room_schedule": "19:00 - 23:00",
+      "jugadores_listos": []
+    }
+  }
+}
