@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Anuncios - <%= guild.name %></title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-brand">📢 Anuncios</div>
+    <div class="navbar-user">
+      <a href="/auth/logout" class="btn btn-secondary btn-sm">Salir</a>
+    </div>
+  </nav>
+
+  <div class="dashboard-wrapper">
+    <%- include('sidebar', { guild, guildId: guild.id }) %>
+
+    <main class="main-content">
+      <div class="page-header">
+        <h1>Gestión de Anuncios</h1>
+        <p>Envía anuncios personalizados a tu servidor</p>
+      </div>
+
+      <div class="section">
+        <h2 class="section-title">Crear Nuevo Anuncio</h2>
+        <form onsubmit="createAnnouncement(event)" class="announce-form">
+          <div class="form-group">
+            <label>Título</label>
+            <input type="text" id="announcementTitle" placeholder="Título del anuncio" required>
+          </div>
+
+          <div class="form-group">
+            <label>Mensaje</label>
+            <textarea id="announcementMessage" placeholder="Escribe tu anuncio..." rows="5" required></textarea>
+            <small>Puedes usar Markdown para dar formato</small>
+          </div>
+
+          <button type="submit" class="btn btn-primary">Enviar Anuncio</button>
+        </form>
+      </div>
+
+      <div class="section">
+        <h2 class="section-title">Anuncios Recientes</h2>
+        <div id="announcementsList" class="announcements-list">
+          <% if (announcements && announcements.length > 0) { %>
+            <% announcements.forEach(ann => { %>
+              <div class="announcement-item">
+                <div class="announcement-header">
+                  <h3><%= ann.title %></h3>
+                  <span class="announcement-date"><%= new Date(ann.posted_at).toLocaleString('es-ES') %></span>
+                </div>
+                <p class="announcement-message"><%= ann.message %></p>
+                <p class="announcement-author">Publicado por: <strong><%= ann.posted_by %></strong></p>
+              </div>
+            <% }) %>
+          <% } else { %>
+            <p class="text-gray-400">No hay anuncios</p>
+          <% } %>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const guildId = '<%= guild.id %>';
+
+    async function createAnnouncement(e) {
+      e.preventDefault();
+
+      const data = {
+        title: document.getElementById('announcementTitle').value,
+        message: document.getElementById('announcementMessage').value
+      };
+
+      try {
+        const response = await fetch(`/api/guild/${guildId}/announcements`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+          alert('✅ Anuncio enviado correctamente');
+          location.reload();
+        } else {
+          alert('❌ Error al enviar anuncio');
+        }
+      } catch (error) {
+        alert('❌ Error: ' + error.message);
+      }
+    }
+  </script>
+
+  <style>
+    .announce-form {
+      background: var(--secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 30px;
+    }
+
+    .form-group textarea {
+      width: 100%;
+      background: #1a1a1a;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      color: white;
+      font-family: 'Fira Code', monospace;
+      font-size: 13px;
+      resize: vertical;
+    }
+
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #5865f2;
+      background: #222;
+    }
+
+    .announcements-list {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .announcement-item {
+      background: var(--secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+    }
+
+    .announcement-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 10px;
+    }
+
+    .announcement-header h3 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .announcement-date {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .announcement-message {
+      margin: 12px 0;
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--text-secondary);
+    }
+
+    .announcement-author {
+      margin: 12px 0 0;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+  </style>
+</body>
+</html>
