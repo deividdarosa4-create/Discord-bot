@@ -1,0 +1,41 @@
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <% if (guild.icon) { %>
+      <img src="https://cdn.discordapp.com/icons/<%= guild.id %>/<%= guild.icon %>.png" alt="<%= guild.name %>" class="guild-avatar">
+    <% } else { %>
+      <div class="guild-avatar-placeholder"><%= guild.name.charAt(0) %></div>
+    <% } %>
+    <h2><%= guild.name %></h2>
+  </div>
+
+  <nav class="sidebar-nav">
+    <a href="/dashboard/<%= guildId %>" class="nav-item">
+      <span class="icon">📊</span>
+      <span>Dashboard</span>
+    </a>
+    <a href="/dashboard/<%= guildId %>/settings" class="nav-item">
+      <span class="icon">⚙️</span>
+      <span>Configuración</span>
+    </a>
+    <a href="/dashboard/<%= guildId %>/roles" class="nav-item">
+      <span class="icon">👥</span>
+      <span>Roles</span>
+    </a>
+    <a href="/dashboard/<%= guildId %>/rooms" class="nav-item">
+      <span class="icon">🎮</span>
+      <span>Salas</span>
+    </a>
+    <a href="/dashboard/<%= guildId %>/announcements" class="nav-item">
+      <span class="icon">📢</span>
+      <span>Anuncios</span>
+    </a>
+    <a href="/dashboard/<%= guildId %>/notificaciones-salas" class="nav-item">
+      <span class="icon">🔥</span>
+      <span>Notificaciones</span>
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <a href="/" class="btn btn-outline btn-sm w-full">← Volver</a>
+  </div>
+</aside>
