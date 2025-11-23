@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configuración - <%= guild.name %></title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-brand">⚙️ Configuración</div>
+    <div class="navbar-user">
+      <a href="/auth/logout" class="btn btn-secondary btn-sm">Salir</a>
+    </div>
+  </nav>
+
+  <div class="dashboard-wrapper">
+    <%- include('sidebar', { guild, guildId: guild.id }) %>
+
+    <main class="main-content">
+      <div class="page-header">
+        <h1>Configuración del Servidor</h1>
+        <p>Personaliza el comportamiento del bot</p>
+      </div>
+
+      <div class="section">
+        <h2 class="section-title">Canales</h2>
+        <form id="settingsForm" class="form">
+          <div class="form-group">
+            <label>Canal de Logs</label>
+            <input type="text" id="log_channel_id" value="<%= config.log_channel_id || '' %>" placeholder="ID del canal para logs">
+            <small>Dónde se enviarán los registros de actividad</small>
+          </div>
+
+          <div class="form-group">
+            <label>Canal de Anuncios</label>
+            <input type="text" id="announce_channel_id" value="<%= config.announce_channel_id || '' %>" placeholder="ID del canal para anuncios">
+            <small>Dónde se enviarán los anuncios</small>
+          </div>
+
+          <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+        </form>
+      </div>
+
+      <div class="section">
+        <h2 class="section-title">Funciones</h2>
+        <div class="features-list">
+          <label class="feature-item">
+            <input type="checkbox" class="feature-toggle" id="feature-roles" checked>
+            <div class="feature-content">
+              <h3>Roles Automáticos</h3>
+              <p>Asigna roles automáticamente cuando los usuarios se unen</p>
+            </div>
+          </label>
+
+          <label class="feature-item">
+            <input type="checkbox" class="feature-toggle" id="feature-rooms" checked>
+            <div class="feature-content">
+              <h3>Gestión de Salas</h3>
+              <p>Permite crear y gestionar salas para jugadores</p>
+            </div>
+          </label>
+
+          <label class="feature-item">
+            <input type="checkbox" class="feature-toggle" id="feature-announcements" checked>
+            <div class="feature-content">
+              <h3>Anuncios</h3>
+              <p>Envía anuncios personalizados al servidor</p>
+            </div>
+          </label>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    document.getElementById('settingsForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const guildId = '<%= guild.id %>';
+      const data = {
+        log_channel_id: document.getElementById('log_channel_id').value,
+        announce_channel_id: document.getElementById('announce_channel_id').value,
+        features: {}
+      };
+
+      try {
+        const response = await fetch(`/api/guild/${guildId}/settings`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+          alert('✅ Configuración guardada correctamente');
+        } else {
+          alert('❌ Error al guardar la configuración');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('❌ Error: ' + error.message);
+      }
+    });
+  </script>
+
+  <style>
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: white;
+    }
+
+    .form-group input {
+      width: 100%;
+      background: var(--secondary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      color: white;
+      font-family: inherit;
+      font-size: 14px;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #5865f2;
+      background: #2c2f33;
+    }
+
+    .form-group small {
+      display: block;
+      margin-top: 5px;
+      color: var(--text-secondary);
+      font-size: 12px;
+    }
+
+    .features-list {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .feature-item {
+      display: flex;
+      gap: 15px;
+      padding: 15px;
+      background: var(--secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .feature-item:hover {
+      background: #3c3f45;
+      border-color: #5865f2;
+    }
+
+    .feature-item input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      accent-color: #5865f2;
+    }
+
+    .feature-content h3 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .feature-content p {
+      margin: 5px 0 0;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+  </style>
+</body>
+</html>
