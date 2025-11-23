@@ -1,0 +1,21 @@
+{
+  "name": "discord-bot-dashboard",
+  "version": "1.0.0",
+  "description": "MEE6-style Dashboard para Bot de Discord",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "express-session": "^1.17.3",
+    "axios": "^1.6.0",
+    "dotenv": "^16.3.1",
+    "ejs": "^3.1.9",
+    "better-sqlite3": "^9.0.0"
+  },
+  "engines": {
+    "node": "20"
+  }
+}
