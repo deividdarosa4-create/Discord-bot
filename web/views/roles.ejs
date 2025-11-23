@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roles - <%= guild.name %></title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-brand">👥 Roles Automáticos</div>
+    <div class="navbar-user">
+      <a href="/auth/logout" class="btn btn-secondary btn-sm">Salir</a>
+    </div>
+  </nav>
+
+  <div class="dashboard-wrapper">
+    <%- include('sidebar', { guild, guildId: guild.id }) %>
+
+    <main class="main-content">
+      <div class="page-header">
+        <h1>Gestión de Roles Automáticos</h1>
+        <p>Asigna roles automáticamente a nuevos miembros</p>
+      </div>
+
+      <div class="section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <h2 class="section-title">Roles Configurados</h2>
+          <button class="btn btn-primary" onclick="showAddRoleForm()">+ Agregar Rol</button>
+        </div>
+
+        <div id="rolesList" class="roles-list">
+          <% if (roles && roles.length > 0) { %>
+            <% roles.forEach(role => { %>
+              <div class="role-item">
+                <div class="role-color" style="background-color: <%= role.role_color %>"></div>
+                <div class="role-info">
+                  <h3><%= role.role_name %></h3>
+                  <p class="text-gray-400"><%= role.role_id %></p>
+                </div>
+                <button class="btn btn-danger btn-sm" onclick="removeRole('<%= role.role_id %>')">Eliminar</button>
+              </div>
+            <% }) %>
+          <% } else { %>
+            <p class="text-gray-400">No hay roles configurados</p>
+          <% } %>
+        </div>
+      </div>
+
+      <!-- Add Role Form -->
+      <div id="addRoleForm" style="display: none;" class="section">
+        <h2 class="section-title">Agregar Nuevo Rol</h2>
+        <form onsubmit="addRole(event)">
+          <div class="form-group">
+            <label>ID del Rol</label>
+            <input type="text" id="roleId" placeholder="ID del rol de Discord" required>
+            <small>Puedes obtenerlo desde Discord Developer Mode</small>
+          </div>
+
+          <div class="form-group">
+            <label>Nombre del Rol</label>
+            <input type="text" id="roleName" placeholder="Nombre del rol" required>
+          </div>
+
+          <div class="form-group">
+            <label>Color del Rol</label>
+            <input type="color" id="roleColor" value="#5865f2">
+          </div>
+
+          <div>
+            <button type="submit" class="btn btn-primary">Guardar Rol</button>
+            <button type="button" class="btn btn-outline" onclick="hideAddRoleForm()">Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const guildId = '<%= guild.id %>';
+
+    function showAddRoleForm() {
+      document.getElementById('addRoleForm').style.display = 'block';
+    }
+
+    function hideAddRoleForm() {
+      document.getElementById('addRoleForm').style.display = 'none';
+    }
+
+    async function addRole(e) {
+      e.preventDefault();
+      
+      const roleId = document.getElementById('roleId').value;
+      const roleName = document.getElementById('roleName').value;
+      const roleColor = document.getElementById('roleColor').value;
+
+      try {
+        const response = await fetch(`/api/guild/${guildId}/roles`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ role_id: roleId, role_name: roleName, role_color: roleColor })
+        });
+
+        if (response.ok) {
+          alert('✅ Rol agregado correctamente');
+          location.reload();
+        } else {
+          alert('❌ Error al agregar rol');
+        }
+      } catch (error) {
+        alert('❌ Error: ' + error.message);
+      }
+    }
+
+    async function removeRole(roleId) {
+      if (!confirm('¿Estás seguro de que deseas eliminar este rol?')) return;
+
+      try {
+        const response = await fetch(`/api/guild/${guildId}/roles/${roleId}`, {
+          method: 'DELETE'
+        });
+
+        if (response.ok) {
+          alert('✅ Rol eliminado');
+          location.reload();
+        } else {
+          alert('❌ Error al eliminar rol');
+        }
+      } catch (error) {
+        alert('❌ Error: ' + error.message);
+      }
+    }
+  </script>
+
+  <style>
+    .roles-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .role-item {
+      background: var(--secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 15px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .role-color {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    .role-info {
+      flex: 1;
+    }
+
+    .role-info h3 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .role-info p {
+      margin: 5px 0 0;
+      font-size: 12px;
+    }
+  </style>
+</body>
+</html>
