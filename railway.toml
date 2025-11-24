@@ -1,0 +1,7 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "python main.py & npm start --prefix web"
+restartPolicyMaxRetries = 3
+restartPolicyWindowSeconds = 60
