@@ -1,10 +1,10 @@
 const express = require('express');
 const session = require('express-session');
+const SQLiteStore = require('connect-sqlite3')(session);
 const axios = require('axios');
 require('dotenv').config();
 const path = require('path');
 const fs = require('fs');
-const Store = session.Store;
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -12,42 +12,12 @@ const PORT = process.env.PORT || 5000;
 // Database
 const db = require('./database/db');
 
-// Custom SQLite Session Store
-class SQLiteSessionStore extends Store {
-  constructor() {
-    super();
-  }
-
-  get(sid, callback) {
-    try {
-      const sess = db.getSession(sid);
-      callback(null, sess);
-    } catch (error) {
-      callback(error);
-    }
-  }
-
-  set(sid, sess, callback) {
-    try {
-      const expires = sess.cookie.expires ? new Date(sess.cookie.expires).getTime() : Date.now() + (30 * 24 * 60 * 60 * 1000);
-      db.saveSession(sid, sess, expires);
-      if (callback) callback(null);
-    } catch (error) {
-      if (callback) callback(error);
-    }
-  }
-
-  destroy(sid, callback) {
-    try {
-      db.deleteSession(sid);
-      if (callback) callback(null);
-    } catch (error) {
-      if (callback) callback(error);
-    }
-  }
-}
-
-const sessionStore = new SQLiteSessionStore();
+// SQLite Store for persistent sessions
+const sessionStore = new SQLiteStore({
+  dir: path.join(__dirname, 'database'),
+  db: 'sessions.sqlite',
+  table: 'sessions'
+});
 
 // Config file path (shared with bot)
 const CONFIG_FILE = path.join(__dirname, '..', 'config.json');
@@ -84,26 +54,34 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-// Session configuration
+// Session configuration - Working with Railway HTTPS + Replit dev
 app.use(session({
   store: sessionStore,
   secret: process.env.SESSION_SECRET || 'dev-secret-key-change-in-production',
   resave: false,
   saveUninitialized: false,
   cookie: { 
-    secure: process.env.NODE_ENV === 'production',
+    secure: process.env.NODE_ENV === 'production' || process.env.RAILWAY_ENVIRONMENT_NAME === 'production',
     httpOnly: true,
-    sameSite: 'Lax',
-    maxAge: 30 * 24 * 60 * 60 * 1000 // 30 días
-  }
+    sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
+    maxAge: 30 * 24 * 60 * 60 * 1000
+  },
+  proxy: true // Trust proxy for Railway
 }));
 
 // Discord OAuth config
 const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID;
 const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
-const DISCORD_REDIRECT_URI = process.env.DISCORD_REDIRECT_URI || 'http://localhost:5000/auth/callback';
 const GUILD_ID = process.env.GUILD_ID;
 const DISCORD_BOT_TOKEN = process.env.DISCORD_TOKEN;
+
+// FIXED redirect URI - must match Discord OAuth settings exactly
+const REDIRECT_URI = 'https://web-production-f1ee6.up.railway.app/auth/callback';
+
+// Always use this redirect URI
+const getRedirectURI = () => {
+  return REDIRECT_URI;
+};
 
 // Permission constants
 const PERMISSION_ADMINISTRATOR = 0x8;
@@ -151,16 +129,22 @@ const isAuthenticated = (req, res, next) => {
 
 app.get('/auth/login', (req, res) => {
   const scopes = ['identify', 'guilds', 'guilds.members.read'];
+  const redirectUri = getRedirectURI();
   
-  const authUrl = `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(DISCORD_REDIRECT_URI)}&response_type=code&scope=${scopes.join('%20')}`;
+  const authUrl = `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scopes.join('%20')}`;
   
+  console.log(`🔐 Login: ${redirectUri}`);
   res.render('login', { authUrl });
 });
 
 app.get('/auth/callback', async (req, res) => {
+  console.log(`🔄 CALLBACK - Iniciado | Code: ${req.query.code ? 'SÍ' : 'NO'} | SID: ${req.sessionID}`);
+  
   const code = req.query.code;
+  const redirectUri = getRedirectURI();
   
   if (!code) {
+    console.error('❌ No authorization code received');
     return res.status(400).render('error', { 
       title: 'Error de Autenticación',
       message: 'Código de autorización no encontrado.'
@@ -168,6 +152,7 @@ app.get('/auth/callback', async (req, res) => {
   }
   
   try {
+    console.log(`📝 Exchanging code for token...`);
     // Intercambiar código por token
     const tokenResponse = await axios.post(
       'https://discord.com/api/oauth2/token',
@@ -176,7 +161,7 @@ app.get('/auth/callback', async (req, res) => {
         client_secret: DISCORD_CLIENT_SECRET,
         code: code,
         grant_type: 'authorization_code',
-        redirect_uri: DISCORD_REDIRECT_URI,
+        redirect_uri: redirectUri,
         scope: 'identify guilds guilds.members.read'
       }),
       {
@@ -185,6 +170,7 @@ app.get('/auth/callback', async (req, res) => {
     );
     
     const accessToken = tokenResponse.data.access_token;
+    console.log(`✅ Token obtenido`);
     
     // Obtener datos del usuario
     const userResponse = await axios.get('https://discord.com/api/users/@me', {
@@ -192,6 +178,7 @@ app.get('/auth/callback', async (req, res) => {
     });
     
     const user = userResponse.data;
+    console.log(`👤 Usuario: ${user.username}`);
     
     // Obtener servidores del usuario
     try {
@@ -199,11 +186,12 @@ app.get('/auth/callback', async (req, res) => {
         headers: { Authorization: `Bearer ${accessToken}` }
       });
       user.guilds = guildsResponse.data || [];
+      console.log(`📊 Servidores: ${user.guilds.length}`);
     } catch (error) {
       user.guilds = [];
     }
     
-    // Guardar en sesión
+    // Guardar datos del usuario en sesión
     req.session.user = {
       id: user.id,
       username: user.username,
@@ -212,21 +200,26 @@ app.get('/auth/callback', async (req, res) => {
       access_token: accessToken
     };
     
-    req.session.save((err) => {
-      if (err) {
+    console.log(`💾 User datos en sesión - ${user.username}`);
+    
+    // Guardar sesión
+    req.session.save((saveErr) => {
+      if (saveErr) {
+        console.error('❌ Error guardando sesión:', saveErr);
         return res.status(500).render('error', { 
           title: 'Error de Sesión',
           message: 'Error al guardar la sesión.'
         });
       }
+      console.log(`✅ Sesión guardada y autenticación completa`);
       res.redirect('/');
     });
     
   } catch (error) {
-    console.error('OAuth error:', error.message);
+    console.error('❌ OAuth error:', error.response?.data || error.message);
     res.status(500).render('error', { 
       title: 'Error de Autenticación',
-      message: 'Error durante la autenticación con Discord.'
+      message: 'Error durante la autenticación con Discord: ' + error.message
     });
   }
 });
@@ -240,8 +233,15 @@ app.get('/auth/logout', (req, res) => {
 
 // =================== RUTAS PRINCIPALES ===================
 
-app.get('/', isAuthenticated, (req, res) => {
-  if (!req.session.user || !req.session.user.guilds || req.session.user.guilds.length === 0) {
+app.get('/', (req, res) => {
+  console.log(`📍 GET / - SID: ${req.sessionID} | Has User: ${req.session.user ? '✅' : '❌'}`);
+  
+  if (!req.session.user) {
+    console.log(`❌ No user in session, redirecting to login`);
+    return res.redirect('/auth/login');
+  }
+  
+  if (!req.session.user.guilds || req.session.user.guilds.length === 0) {
     return res.render('no-servers', { user: req.session.user });
   }
   
@@ -255,6 +255,7 @@ app.get('/', isAuthenticated, (req, res) => {
     });
   }
   
+  console.log(`✅ Rendering dashboard for ${req.session.user.username}`);
   res.render('servers', { 
     user: req.session.user,
     guilds: adminGuilds
