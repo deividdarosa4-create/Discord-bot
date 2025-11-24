@@ -1,6 +1,5 @@
 const express = require('express');
 const session = require('express-session');
-const SQLiteStore = require('connect-sqlite3')(session);
 const axios = require('axios');
 require('dotenv').config();
 const path = require('path');
@@ -12,12 +11,8 @@ const PORT = process.env.PORT || 5000;
 // Database
 const db = require('./database/db');
 
-// SQLite Store for persistent sessions
-const sessionStore = new SQLiteStore({
-  dir: path.join(__dirname, 'database'),
-  db: 'sessions.sqlite',
-  table: 'sessions'
-});
+// Simple Memory Store for sessions
+const sessionStore = new session.MemoryStore();
 
 // Config file path (shared with bot)
 const CONFIG_FILE = path.join(__dirname, '..', 'config.json');
@@ -54,19 +49,18 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-// Session configuration - Working with Railway HTTPS + Replit dev
+// Session configuration
 app.use(session({
   store: sessionStore,
   secret: process.env.SESSION_SECRET || 'dev-secret-key-change-in-production',
   resave: false,
   saveUninitialized: false,
   cookie: { 
-    secure: process.env.NODE_ENV === 'production' || process.env.RAILWAY_ENVIRONMENT_NAME === 'production',
+    secure: false,
     httpOnly: true,
-    sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
-    maxAge: 30 * 24 * 60 * 60 * 1000
-  },
-  proxy: true // Trust proxy for Railway
+    sameSite: false,
+    maxAge: 24 * 60 * 60 * 1000 // 24 horas
+  }
 }));
 
 // Discord OAuth config
@@ -191,7 +185,7 @@ app.get('/auth/callback', async (req, res) => {
       user.guilds = [];
     }
     
-    // Guardar datos del usuario en sesión
+    // Guardar usuario en sesión
     req.session.user = {
       id: user.id,
       username: user.username,
@@ -200,20 +194,8 @@ app.get('/auth/callback', async (req, res) => {
       access_token: accessToken
     };
     
-    console.log(`💾 User datos en sesión - ${user.username}`);
-    
-    // Guardar sesión
-    req.session.save((saveErr) => {
-      if (saveErr) {
-        console.error('❌ Error guardando sesión:', saveErr);
-        return res.status(500).render('error', { 
-          title: 'Error de Sesión',
-          message: 'Error al guardar la sesión.'
-        });
-      }
-      console.log(`✅ Sesión guardada y autenticación completa`);
-      res.redirect('/');
-    });
+    console.log(`✅ Usuario autenticado: ${user.username}`);
+    res.redirect('/');
     
   } catch (error) {
     console.error('❌ OAuth error:', error.response?.data || error.message);
